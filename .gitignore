@@ -12,3 +12,4 @@ __pycache__/
 *.zip
 *.webm
 data/text-categories.json
+_site/

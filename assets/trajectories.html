@@ -11,6 +11,8 @@
     <aside id="category-legend" aria-label="Text categories"><span style="color:#C83FE8">1 · Noise / numbers</span><span style="color:#1685F8">2 · Observable labels</span><span style="color:#F27622">3 · Scene speculation</span><span style="color:#35B85A">4 · Unrelated content</span></aside>
     <div id="depth-help">Z = TIME · EARLIER → BACK / LATER → FRONT<br>Drag left / right without limits · Scroll to zoom · Double-click for front view</div>
     <output id="error" role="status" hidden></output>
+    <script src="../media-config.js"></script>
+    <script src="static-data.js"></script>
     <script src="surface-texture.js?v=shared-57"></script>
     <script src="trajectory-surface.js?v=20261027-iterations-2"></script>
     <script>
@@ -334,7 +336,7 @@
         async function refresh(){
             try{
                 const head=await fetch('trajectories-data.json',{method:'HEAD',cache:'no-store'});if(!head.ok)throw Error();
-                const stamp=head.headers.get('Last-Modified');if(stamp&&stamp===modified)return;
+                const stamp=head.headers.get('Last-Modified');const localRevision=window.EACStaticStore?.revision()||'';if(stamp&&stamp+localRevision===modified)return;
                 let owner=window;try{if(window.top.location.origin===location.origin)owner=window.top;}catch{}
                 const shared=owner.__eacTrajectoryDownloads||(owner.__eacTrajectoryDownloads=new Map());
                 const key=new URL('trajectories-data.json',location.href).href;
@@ -343,7 +345,7 @@
                     download={stamp,created:Date.now(),promise:fetch(key,{cache:'no-store'}).then(response=>{if(!response.ok)throw Error();return response.text();})};shared.set(key,download);
                     const failed=download;download.promise.catch(()=>{if(shared.get(key)===failed)shared.delete(key);});
                 }
-                const value=JSON.parse(await download.promise);if(value.version!==2)throw Error();modified=stamp;
+                let value=JSON.parse(await download.promise);if(window.EACStaticStore)value=window.EACStaticStore.trajectories(value);if(value.version!==2)throw Error();modified=stamp?stamp+localRevision:null;
                 if(value.updatedAt!==revision){const time=current(),first=!data;captionPixels=0;data=value;data.entries.sort((a,b)=>a.start-b.start);revision=value.updatedAt;offset=first?(embedded&&hasParentClock?offset:0):time;origin=performance.now();previousTime=-1;clearHistory();render();}
                 document.getElementById('error').hidden=true;
             }catch{document.getElementById('error').textContent='Unable to refresh trajectories. Retrying…';document.getElementById('error').hidden=false;}

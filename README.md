@@ -18,7 +18,9 @@ Open http://127.0.0.1:8009 and use the top-left selector to switch versions. The
 
 ## Hosting
 
-This repository includes a Python backend. Uploading to GitHub stores the complete source and assets; GitHub Pages alone cannot run the shared annotation backend. To retain every feature online, deploy this folder on a Python-capable server.
+GitHub Pages publishes all 19 versions with the short video and existing annotations. New annotations are stored only in the visitor’s browser and also appear in that browser’s trajectory views. They are not shared with other visitors.
+
+The included Python backend remains available for local use with shared annotations. The Pages workflow builds a static artifact with `python3 tools/build_pages.py`; the database and backend files are excluded from that artifact.
 
 ## Attribution
 

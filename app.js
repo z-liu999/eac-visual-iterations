@@ -89,6 +89,7 @@ const migrationKey = 'eac:migrated:' + mediaKey;
 let syncing = false, noteCursor = null, noteWindowTo = null, noteSeekVersion = 0;
 
 async function apiRequest(method, note) {
+    if (window.EACStaticStore) return window.EACStaticStore.request(method, note, Math.max(0, current() - 15), current() + 40);
     const from = Math.max(0, current() - 15);
     const to = current() + 40;
     const incremental = method === 'GET' && Number.isInteger(noteCursor) && Number.isFinite(noteWindowTo) && to >= noteWindowTo;
@@ -769,12 +770,12 @@ video.addEventListener('contextmenu', e => e.preventDefault());
 async function loadVideoSource(restoreTime = false) {
     const resumeAt = restoreTime ? current() : 0;
     try {
-        const response = await fetch('/api/media', { cache : 'no-store' });
+        const response = window.EAC_MEDIA_CONFIG?.staticMode ? null : await fetch('/api/media', { cache : 'no-store' });
         let source = VIDEO_URL;
-        if (response.ok) {
+        if (response?.ok) {
             const media = await response.json();
             source = media.url || VIDEO_URL;
-        } else if (response.status !== 404) {
+        } else if (response && response.status !== 404) {
             throw new Error('Media service unavailable');
         }
         // Pixel sampling requires a same-origin video until R2 CORS is configured.
