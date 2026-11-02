@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EaC — Beneath the surface</title>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:white;font-family:"Courier New",monospace}#viewport{position:absolute;inset:0;perspective:1600px;overflow:hidden}#space{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform;pointer-events:none}.face{position:absolute;inset:0;backface-visibility:hidden;transform-style:preserve-3d}.face iframe{width:100%;height:100%;border:0;display:block;background:white}#surface{transform:translateZ(0);pointer-events:auto}#surface iframe{will-change:opacity}#inside{transform:translateZ(-850px);background:white;border:0;pointer-events:none}#inside iframe{opacity:0}#edges{position:absolute;inset:0;pointer-events:none;transform-style:preserve-3d}.edge{position:absolute;width:1px;height:850px;background:#a4a4a4;opacity:0;transform-origin:top center;transform:rotateX(-90deg)}.edge:nth-child(1){left:0;top:0}.edge:nth-child(2){right:0;top:0}.edge:nth-child(3){left:0;bottom:-850px}.edge:nth-child(4){right:0;bottom:-850px}#surface-border{position:absolute;inset:0;border:1px solid #9b9b9b;pointer-events:none;opacity:0}#help{position:fixed;left:20px;bottom:20px;z-index:5;padding:9px 12px;color:white;background:#0009;font-size:11px;line-height:1.6;pointer-events:none}#back{position:fixed;right:20px;top:20px;z-index:5;border:1px solid #ccc;background:#fffffff2;color:#222;font:11px "Courier New",monospace;padding:10px 14px;cursor:pointer}#back[hidden]{display:none}#loading{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:white;color:#777;font:12px "Courier New",Courier,monospace;pointer-events:auto}#loading[hidden]{display:none}#loading-label{position:absolute;left:0;top:0;padding:.2em .4em .4em;background:rgba(0,0,0,.8);color:#fff;font:16px "Courier New",Courier,monospace;line-height:normal;white-space:nowrap;will-change:transform}#loading-label:after{content:"";position:absolute;left:var(--leader-x,100%);top:var(--leader-y,0%);width:var(--leader-length,14px);height:2px;background:rgba(0,0,0,.5);transform-origin:0 50%;transform:translateY(-1px) rotate(var(--leader-angle,0deg))}@media(prefers-reduced-motion:reduce){#loading-label{will-change:auto}}@media(prefers-reduced-motion:reduce){#space{will-change:auto}}
+</style>
+</head>
+<body>
+<div id="viewport"><div id="space">
+<div id="inside" class="face"><iframe id="trails-frame" title="Time and annotation trajectories" src="trajectories.html?embedded=1&v=single-video-116"></iframe></div>
+<div id="edges"><i class="edge"></i><i class="edge"></i><i class="edge"></i><i class="edge"></i></div>
+<div id="surface" class="face"><iframe id="surface-frame" title="Exhausting a Crowd video and annotations" src="../?surface=1&v=20261029-retained-52"></iframe><div id="surface-border"></div></div>
+</div></div>
+<div id="loading" role="status" aria-live="polite"><span id="loading-label">LOADING…</span></div>
+<script src="iterations-data.js"></script>
+<script src="iteration-nav.js?v=eleven-versions-14"></script>
+<script src="zoom-space.js?v=loading-118"></script>
+<script src="surface-texture.js?v=single-video-116"></script>
+<script src="portal19.js?v=single-video-116"></script>
+<script src="loading-screen.js?v=stable-buffer-122"></script>
+</body>
+</html>

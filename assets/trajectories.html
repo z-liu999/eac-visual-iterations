@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EaC — Time in depth</title>
+    <style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}#error{position:fixed;bottom:16px;left:16px;color:#000;font:12px sans-serif}#error[hidden]{display:none}#category-legend{display:none!important;position:fixed;left:16px;bottom:14px;display:flex;gap:16px;flex-wrap:wrap;padding:6px 8px;background:#ffffffdd;pointer-events:none;font:11px/1.5 ui-monospace,monospace}#category-legend span:before{content:'● ';}@media(max-width:700px){#category-legend{gap:4px 12px;font-size:9px;right:16px}}#depth-help{position:fixed;top:16px;left:16px;color:#7c858c;background:#ffffffdd;padding:6px 8px;pointer-events:none;font:10px/1.6 ui-monospace,monospace}</style>
+</head>
+<body>
+    <canvas id="trajectories" aria-label="Colored trajectories in 3D: depth represents video time. Drag horizontally to rotate continuously left or right; wheel zooms; double-click restores the front view. Space pauses; arrow keys seek ten seconds."></canvas>
+    <aside id="category-legend" aria-label="Text categories"><span style="color:#C83FE8">1 · Noise / numbers</span><span style="color:#1685F8">2 · Observable labels</span><span style="color:#F27622">3 · Scene speculation</span><span style="color:#35B85A">4 · Unrelated content</span></aside>
+    <div id="depth-help">Z = TIME · EARLIER → BACK / LATER → FRONT<br>Drag left / right without limits · Scroll to zoom · Double-click for front view</div>
+    <output id="error" role="status" hidden></output>
+    <script src="surface-texture.js?v=shared-57"></script>
+    <script src="trajectory-surface.js?v=20261027-iterations-2"></script>
+    <script>
+        const embedded=new URLSearchParams(location.search).has('embedded');
+        const archiveVersion=Number(new URLSearchParams(location.search).get('archive'));
+        const clearCodeCaptions=[15,16,17].includes(archiveVersion);
+        const captionPadding=clearCodeCaptions?8:0;
+        const crispCaptions=clearCodeCaptions||archiveVersion===19||!archiveVersion;
+        let sliceView=null;
+        const videoSlices=new URLSearchParams(location.search).has('videoSlices');
+        if(videoSlices)document.documentElement.style.background=document.body.style.background='transparent';
+        let embeddedVisible=!embedded,hasParentClock=false;
+        if(embedded||archiveVersion)document.getElementById('depth-help').hidden=true;
+        const canvas=document.getElementById('trajectories'),mainCtx=canvas.getContext('2d',{alpha:embedded});
+        let ctx=mainCtx;
+        const historyCanvas=document.createElement('canvas'),historyBuffer=document.createElement('canvas');
+        let historyJob=null,historyKey='',historyReady=false,historyVersion=0,historyIds=new Set();
+        let data=null,modified='',revision='',zoom=1,panX=0,panY=0,gesture=null;
+        let yaw=0,pitch=0;
+        let width=innerWidth,height=innerHeight,scale=1,origin=performance.now(),offset=0,paused=false;
+        let next=0,previousTime=-1,lastFrame=-Infinity;
+        const active=new Map();
+        let needsRender=true,captionPixels=0;
+        const MAX_CAPTION_PIXELS=32*1024*1024;
+        const measureCanvas=document.createElement('canvas'),measureCtx=measureCanvas.getContext('2d');
+        measureCtx.font='12px "Courier New", Courier, monospace';
+        const glyphWidths=new Map();
+        function glyphWidth(char){let value=glyphWidths.get(char);if(value===undefined){value=measureCtx.measureText(char).width;glyphWidths.set(char,value);}return value;}
+        function retainedOpacity(age){
+            if(age<=5)return 1;
+            if(age<6.5){const t=(age-5)/1.5;return 1-.8*(t*t*(3-2*t));}
+            return .2-.1*Math.min(1,(age-6.5)/53.5);
+        }
+        function textOpacity(age){
+            if(age<6.5)return retainedOpacity(age);
+            return .2-.05*Math.min(1,(age-6.5)/53.5);
+        }
+        function current(){if(videoSlices&&window.EACSliceRender)return offset;return data?(offset+(paused?0:(performance.now()-origin)/1000))%data.duration:0;}
+        function seek(time){offset=Math.max(0,Math.min(data?.duration-.001||0,time));origin=performance.now();previousTime=-1;clearHistory();render();}
+        function rebuild(time){active.clear();next=0;for(const entry of data.entries){if(entry.start>time)break;next++;active.set(entry.id,entry);}}
+        function projection(time){
+            if(videoSlices&&sliceView){
+                const v=sliceView,c=Math.cos(v.yaw),s=Math.sin(v.yaw),extent=Math.max(30,time);
+                const project=(x,y,t)=>{const wx=(x-.5)*(v.planeWidth||1.65),wy=(y-.5)*(v.planeHeight||.928125),wz=v.depthPerSecond?2.125-(time-t)*v.depthPerSecond:(t/extent-.5)*4.25,rx=wx*c+wz*s,z=-wx*s+wz*c+v.travel,d=5.1-z,k=v.zoom/d;return {x:width/2+rx*k*height/2,y:height/2+wy*k*height/2,z,distance:d,clipped:d<.06,size:1};};
+                project.unitX=1/width;project.unitY=1/height;
+                return {project,extent,w:width,h:height,depth:4.25,focal:5.1,surfaceGap:0};
+            }
+            if(archiveVersion&&![18,19].includes(archiveVersion)){
+                const w=width*zoom,h=height*zoom;
+                const project=(x,y,t)=>({x:width/2+(x-.5)*w,y:height/2+(y-.5)*h,z:0,size:zoom});
+                project.unitX=1/width;project.unitY=1/height;
+                return {project,extent:Math.max(30,time),w,h,depth:0,focal:1,surfaceGap:0};
+            }
+            const focal=Math.max(width,height)*1.6;
+            const baseWidth=Math.max(1,width)*.81;
+            const fit=1+baseWidth*.575/focal;
+            const w=baseWidth/fit*zoom,h=Math.max(1,height)*.81/fit*zoom;
+            const depth=w*1.15,extent=Math.max(30,time),surfaceGap=embedded?w*.04:0;
+            const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+            function project(x,y,t){
+                const wx=(x-.5)*w,wy=(y-.5)*h,wz=t/extent*(depth-surfaceGap)-depth/2;
+                const rx=wx*cy+wz*sy,rz=-wx*sy+wz*cy;
+                const ry=wy*cp-rz*sp,z=wy*sp+rz*cp;
+                const size=focal/Math.max(focal*.18,focal-z);
+                return {x:width/2+panX+rx*size,y:height/2+panY+ry*size,z,size};
+            }
+            project.unitX=zoom/w;project.unitY=zoom/h;
+            return {project,extent,w,h,depth,focal,surfaceGap};
+        }
+        function sliceVisibility(p){
+            if(!videoSlices)return 1;
+            try{return parent.EACSliceOcclusion?.(p[0],p[1],p[2])??1;}catch{return 1;}
+        }
+        function clipCaptionToSlice(time,project){
+            if(!videoSlices)return true;
+            let vertices=[[0,0,time],[1,0,time],[1,1,time],[0,1,time]];
+            const clipped=[];
+            for(let i=0;i<vertices.length;i++){
+                const from=vertices[i],to=vertices[(i+1)%vertices.length],a=project(...from),b=project(...to);
+                const insideA=!a.clipped,insideB=!b.clipped;
+                if(insideA)clipped.push(from);
+                if(insideA!==insideB){const u=(.06001-a.distance)/(b.distance-a.distance);clipped.push(from.map((v,j)=>v+(to[j]-v)*u));}
+            }
+            if(clipped.length<3)return false;
+            ctx.beginPath();clipped.forEach((p,i)=>{const point=project(...p);if(i)ctx.lineTo(point.x,point.y);else ctx.moveTo(point.x,point.y);});ctx.closePath();ctx.clip();return true;
+        }
+        function drawCode(entry,point,position,opacity,project){
+            opacity*=sliceVisibility(position);if(opacity<.001)return;
+            const x=position[0]+8*project.unitX,y=position[1]+8*project.unitY,t=position[2];
+            const origin=project(x,y,t),right=project(x+project.unitX,y,t),down=project(x,y+project.unitY,t);
+            if(videoSlices&&(origin.clipped||right.clipped||down.clipped))return;
+            const a=right.x-origin.x,b=right.y-origin.y,c=down.x-origin.x,d=down.y-origin.y;
+            if(Math.abs(a*d-b*c)<.001)return;
+            if(Math.hypot(a,b)*12<2||Math.hypot(c,d)*12<2)return;
+            entry.literal ||= JSON.stringify(entry.text);
+            const source=archiveVersion===17?entry.text:'note.text = '+entry.literal+';\n'
+                +'note.x = '+Math.round(position[0]*1920)+'; note.y = '+Math.round(position[1]*1080)+';\n'
+                +'note.z = '+position[2].toFixed(2)+'; // seconds\n'
+                +'note.opacity = '+(Math.round(opacity*20)/20).toFixed(2)+';';
+            if(entry.captionSource!==source){
+                const rows=[];let row={runs:[],width:0};
+                const tokens=source.match(/\/\/[^\n]*|"(?:\\.|[^"\\])*"|\b\d+(?:\.\d+)?\b|\b[A-Za-z_$][\w$]*\b|[\s\S]/g)||[];
+                for(const token of tokens){
+                    const color=archiveVersion===17?'#000':token.startsWith('//')?'#6a9955':token.startsWith('"')?'#ce9178':/^\d/.test(token)?'#b5cea8':/^[A-Za-z_$]/.test(token)?'#9cdcfe':'#d4d4d4';
+                    for(const char of token){
+                        if(char==='\n'){rows.push(row);row={runs:[],width:0};continue;}
+                        const w=glyphWidth(char);
+                        if(row.width&&row.width+w>270){rows.push(row);row={runs:[],width:0};}
+                        let run=row.runs.at(-1);
+                        if(!run||run.color!==color){run={text:'',color,width:0};row.runs.push(run);}
+                        run.text+=char;run.width+=w;row.width+=w;
+                    }
+                }
+                if(row.runs.length)rows.push(row);
+                entry.captionRows=rows;entry.captionSource=source;
+                entry.bitmapDirty=true;
+            }
+            const logicalWidth=Math.ceil(Math.max(...entry.captionRows.map(row=>row.width)))+3+captionPadding*2;
+            const logicalHeight=entry.captionRows.length*16+3+captionPadding*2;
+            const corners=[[0,0],[logicalWidth,0],[0,logicalHeight],[logicalWidth,logicalHeight]].map(([x,y])=>({x:origin.x+a*x+c*y,y:origin.y+b*x+d*y}));
+            if(corners.every(p=>p.x<0)||corners.every(p=>p.x>width)||corners.every(p=>p.y<0)||corners.every(p=>p.y>height))return;
+            const rasterScale=opacity<=.150001?.5:(crispCaptions?Math.min(2,Math.max(1,devicePixelRatio||1)):(active.size>8000?.25:active.size>1500?.5:1));
+            const bitmapWidth=Math.ceil(logicalWidth*rasterScale);
+            const bitmapHeight=Math.ceil(logicalHeight*rasterScale);
+            const oldPixels=entry.captionBitmap?entry.captionBitmap.width*entry.captionBitmap.height:0;
+            const newPixels=bitmapWidth*bitmapHeight;
+            if(captionPixels-oldPixels+newPixels<=MAX_CAPTION_PIXELS){
+                if(!entry.captionBitmap)entry.captionBitmap=document.createElement('canvas');
+                const bitmap=entry.captionBitmap;
+                if(bitmap.width!==bitmapWidth||bitmap.height!==bitmapHeight){bitmap.width=bitmapWidth;bitmap.height=bitmapHeight;entry.bitmapDirty=true;}
+                captionPixels+=newPixels-oldPixels;
+                if(entry.bitmapDirty){
+                    const paint=bitmap.getContext('2d');paint.setTransform(1,0,0,1,0,0);paint.clearRect(0,0,bitmap.width,bitmap.height);paint.scale(rasterScale,rasterScale);
+                    if(archiveVersion===15){paint.fillStyle='rgba(30,30,30,.75)';paint.fillRect(0,0,logicalWidth,logicalHeight);}
+                    paint.font='12px "Courier New", Courier, monospace';paint.textBaseline='top';
+                    for(let i=0;i<entry.captionRows.length;i++){
+                        let x=captionPadding;for(const run of entry.captionRows[i].runs){paint.fillStyle=run.color;paint.fillText(run.text,x,i*16+captionPadding);x+=run.width;}
+                    }
+                    entry.bitmapDirty=false;
+                }
+                ctx.save();if(!clipCaptionToSlice(t,project)){ctx.restore();return;}ctx.globalAlpha=opacity;ctx.transform(a,b,c,d,origin.x,origin.y);
+                ctx.drawImage(bitmap,0,0,logicalWidth,logicalHeight);ctx.restore();
+                return;
+            }
+            ctx.save();if(!clipCaptionToSlice(t,project)){ctx.restore();return;}ctx.font='12px "Courier New", Courier, monospace';ctx.textBaseline='top';
+            ctx.transform(a,b,c,d,origin.x,origin.y);ctx.globalAlpha=opacity;
+            if(archiveVersion===15){ctx.fillStyle='rgba(30,30,30,.75)';ctx.fillRect(0,0,logicalWidth,logicalHeight);}
+            for(let i=0;i<entry.captionRows.length;i++){
+                let x=captionPadding;
+                for(const run of entry.captionRows[i].runs){ctx.fillStyle=run.color;ctx.fillText(run.text,x,i*16+captionPadding);x+=run.width;}
+            }
+            ctx.restore();
+        }
+        function paintEntry(entry,time,project){
+                if(videoSlices){
+                    if(entry.path.at(-1)[2]<(sliceView?.minTime||0))return;
+                    if(!entry.worldBounds){let minX=1,minY=1,maxX=0,maxY=0;for(const p of entry.path){minX=Math.min(minX,p[0]);minY=Math.min(minY,p[1]);maxX=Math.max(maxX,p[0]);maxY=Math.max(maxY,p[1]);}entry.worldBounds=[minX,minY,maxX,maxY];}
+                    const [x0,y0,x1,y1]=entry.worldBounds,corners=[];
+                    for(const x of [x0,x1])for(const y of [y0,y1])for(const t of [entry.start,Math.min(time,entry.path.at(-1)[2])])corners.push(project(x,y,t));
+                    if(corners.every(p=>p.clipped))return;
+                    if(corners.every(p=>!p.clipped)&&(corners.every(p=>p.x < -350)||corners.every(p=>p.x>width+350)||corners.every(p=>p.y < -120)||corners.every(p=>p.y>height+120)))return;
+                }
+                const color=[14,18].includes(archiveVersion)?(data.categories?.[entry.category]?.color||'#1685F8'):'#000';ctx.strokeStyle=color;ctx.fillStyle=color;
+                const path=entry.path;const first=project(path[0][0],path[0][1],path[0][2]);
+                let labelPoint=first,labelPosition=path[0],visibleLabelPosition=null;
+                if(entry.moving){
+                    const age=Math.max(0,time-entry.start),baseLineOpacity=retainedOpacity(age);
+                    const backAmount=videoSlices?Math.max(0,Math.min(1,(-Math.cos(sliceView?.yaw||0)-.5)/.3)):0;
+                    const backBlend=backAmount*backAmount*(3-2*backAmount);
+                    ctx.globalAlpha=baseLineOpacity;ctx.lineWidth=videoSlices?Math.max(.6,3*Math.min(1,(sliceView?.zoom||5.7)/5.7)):3*first.size;
+                    ctx.beginPath();ctx.moveTo(first.x,first.y);
+                    let segmentStart=path[0];
+                    for(let i=1;i<path.length;i++){
+                        let a=videoSlices?segmentStart:path[i-1];const b=path[i];
+                        if(videoSlices){const cutoff=sliceView?.minTime||0;if(b[2]<cutoff){segmentStart=b;continue;}if(a[2]<cutoff){const u=(cutoff-a[2])/(b[2]-a[2]||1);a=a.map((v,j)=>v+(b[j]-v)*u);}}
+                        const f=b[2]<=time?1:Math.max(0,Math.min(1,(time-a[2])/(b[2]-a[2]||1)));
+                        const p=project(a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f);
+                        labelPoint=p;labelPosition=[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];
+                        if(videoSlices){
+                            let from=a,to=labelPosition,start=project(...from),end=project(...to);
+                            if(!start.clipped&&!end.clipped&&i<path.length-1&&b[2]<=time&&Math.hypot(end.x-start.x,end.y-start.y)<.8&&b[2]-a[2]<.1)continue;
+                            segmentStart=b;
+                            if(!(start.clipped&&end.clipped)){
+                                if(start.clipped||end.clipped){
+                                    const u=(.06+1e-5-start.distance)/(end.distance-start.distance),cut=from.map((v,j)=>v+(to[j]-v)*u);
+                                    if(start.clipped){from=cut;start=project(...cut);}else{to=cut;end=project(...cut);}
+                                }
+                                let enter=0,exit=1;const dx=end.x-start.x,dy=end.y-start.y;
+                                for(const [origin,delta,min,max]of [[start.x,dx,-3,width+3],[start.y,dy,-3,height+3]]){
+                                    if(Math.abs(delta)<1e-8){if(origin<min||origin>max)exit=-1;continue;}
+                                    let lo=(min-origin)/delta,hi=(max-origin)/delta;if(lo>hi)[lo,hi]=[hi,lo];enter=Math.max(enter,lo);exit=Math.min(exit,hi);
+                                }
+                                if(enter>exit){if(b[2]>time)break;continue;}
+                                if(enter>0||exit<1){
+                                    const fromBefore=from,toBefore=to,da=start.distance,db=end.distance;
+                                    const worldRatio=t=>t*da/((1-t)*db+t*da);
+                                    const u=worldRatio(enter),v=worldRatio(exit);
+                                    from=fromBefore.map((p,j)=>p+(toBefore[j]-p)*u);to=fromBefore.map((p,j)=>p+(toBefore[j]-p)*v);
+                                    start=project(...from);end=project(...to);
+                                }
+                                const steps=Math.max(1,Math.min(sliceView?.interacting?128:512,Math.ceil(Math.hypot(end.x-start.x,end.y-start.y)/(sliceView?.interacting?6:3))));
+                                let previous=start,runAlpha=-1,pathOpen=false;
+                                for(let step=1;step<=steps;step++){
+                                    const ratio=step/steps,middleRatio=(step-.5)/steps;
+                                    const point=from.map((v,j)=>v+(to[j]-v)*ratio),middle=from.map((v,j)=>v+(to[j]-v)*middleRatio),nextPoint=project(...point);
+                                    const near=start.distance+(end.distance-start.distance)*middleRatio,nearAlpha=Math.max(0,Math.min(1,(near-.06)/.18));
+                                    const visibility=nearAlpha>0?sliceVisibility(middle):0;
+                                    let lineAlpha=baseLineOpacity;
+                                    if(visibility>.001&&backBlend<1){
+                                        let frameAlpha=retainedOpacity(Math.max(0,time-middle[2]));
+                                        try{frameAlpha=parent.EACSliceFrameOpacity?.(...middle)??frameAlpha;}catch{}
+                                        lineAlpha=frameAlpha*(1-backBlend)+baseLineOpacity*backBlend;
+                                    }
+                                    const alpha=lineAlpha*visibility*nearAlpha;
+                                    const level=alpha>.001?Math.round(alpha*1024)/1024:0;
+                                    if(level!==runAlpha){if(pathOpen){ctx.stroke();pathOpen=false;}runAlpha=level;if(level>0){ctx.globalAlpha=level;ctx.beginPath();ctx.moveTo(previous.x,previous.y);pathOpen=true;}}
+                                    if(pathOpen){
+                                        ctx.lineTo(nextPoint.x,nextPoint.y);
+                                        if(!nextPoint.clipped&&nextPoint.x>0&&nextPoint.x<width-30&&nextPoint.y>0&&nextPoint.y<height-30)visibleLabelPosition=point;
+                                    }
+                                    previous=nextPoint;
+                                }
+                                if(pathOpen)ctx.stroke();
+                            }
+                        }else ctx.lineTo(p.x,p.y);
+                        if(b[2]>time)break;
+                    }
+                    if(!videoSlices)ctx.stroke();
+                }else{
+                    const age=Math.max(0,time-entry.start);
+                    const fadeIn=Math.max(0,Math.min(1,age/.9));
+                    ctx.globalAlpha=(fadeIn*fadeIn*(3-2*fadeIn))*retainedOpacity(age)*sliceVisibility(path[0])*(videoSlices?Math.max(0,Math.min(1,(first.distance-.06)/.18)):1);
+                    if(!videoSlices||!first.clipped){ctx.beginPath();ctx.arc(first.x,first.y,1.5*first.size,0,Math.PI*2);ctx.fill();}
+                }
+                if(entry.text&&![13,14,18].includes(archiveVersion)){
+                    const age=Math.max(0,time-entry.start);
+                    const fadeIn=entry.moving?1:Math.max(0,Math.min(1,age/.9));
+                    const opacity=fadeIn*fadeIn*(3-2*fadeIn)*textOpacity(age);
+                    if(videoSlices&&visibleLabelPosition){
+                        const endpoint=project(...labelPosition);
+                        if(endpoint.clipped||endpoint.x<0||endpoint.x>width-30||endpoint.y<0||endpoint.y>height-30||sliceVisibility(labelPosition)<.01){labelPosition=visibleLabelPosition;labelPoint=project(...labelPosition);}
+                    }
+                    drawCode(entry,labelPoint,labelPosition,opacity,project);
+                }
+                ctx.globalAlpha=1;
+        }
+        function clearHistory(){
+            historyVersion++;historyJob=null;historyKey='';historyReady=false;historyIds.clear();
+        }
+        function advanceHistory(){
+            const job=historyJob;if(!job)return;
+            const deadline=performance.now()+(videoSlices?1.5:3);
+            ctx=job.ctx;
+            try{
+                while(job.index<job.objects.length){
+                    const entry=job.objects[job.index++].entry;
+                    paintEntry(entry,job.time,job.project);
+                    if(performance.now()>=deadline)break;
+                }
+            }finally{ctx=mainCtx;}
+            if(job.index===job.objects.length){
+                historyCanvas.width=historyBuffer.width;historyCanvas.height=historyBuffer.height;
+                historyCanvas.getContext('2d').drawImage(historyBuffer,0,0);
+                historyKey=job.key;historyIds=new Set(job.objects.map(object=>object.entry.id));historyReady=true;historyJob=null;needsRender=true;
+            }
+        }
+        function render(){
+            if(!embeddedVisible)return;
+            needsRender=false;
+            const renderStart=performance.now();
+            ctx.setTransform(scale,0,0,scale,0,0);ctx.globalAlpha=1;if(embedded)ctx.clearRect(0,0,width,height);else{ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);}
+            if(!data)return;
+            const time=current();
+            if(previousTime<0||time<previousTime-((embedded&&!videoSlices)?0.5:0)||time-previousTime>1){clearHistory();rebuild(time);}
+            while(next<data.entries.length&&data.entries[next].start<=time){const entry=data.entries[next++];active.set(entry.id,entry);}
+            previousTime=time;
+            const {project,extent,w,h,depth,focal}=projection(time);
+            window.EACTrajectorySurface?.update({w,h,depth,focal,yaw,pitch,centerX:width/2+panX,centerY:height/2+panY});
+            ctx.lineJoin='round';ctx.lineCap=videoSlices?'butt':'round';
+            let tracks=0,dots=0,texts=0;
+            const objects=[];
+            for(const entry of active.values()){
+                if(videoSlices&&entry.path.at(-1)[2]<(sliceView?.minTime||0)){
+                    active.delete(entry.id);
+                    if(entry.captionBitmap){captionPixels-=entry.captionBitmap.width*entry.captionBitmap.height;entry.captionBitmap.width=entry.captionBitmap.height=0;delete entry.captionBitmap;entry.bitmapDirty=true;}
+                    continue;
+                }
+                const path=entry.path,first=path[0];
+                const endTime=entry.moving?Math.min(time,path.at(-1)[2]):entry.start;
+                const middle=project(first[0],first[1],(entry.start+endTime)/2);
+                objects.push({entry,depth:middle.z});
+            }
+            objects.sort((a,b)=>a.depth-b.depth);
+            if(videoSlices){
+                for(const {entry}of objects){paintEntry(entry,time,project);if(entry.moving)tracks++;else dots++;if(entry.text)texts++;}
+                canvas.dataset.visibleTexts=texts;canvas.dataset.activeTracks=tracks;canvas.dataset.activeDots=dots;canvas.dataset.renderMs=(performance.now()-renderStart).toFixed(1);canvas.dataset.occlusionMode='current-view-segment-sampling';canvas.dataset.total=data.total;return;
+            }
+            const settled=[],recent=[];
+            for(const object of objects){
+                const entry=object.entry;
+                if(time>=Math.max(entry.start+60,entry.path.at(-1)[2])){
+                    settled.push(object);
+                    if(historyReady&&!historyIds.has(entry.id))recent.push(object);
+                }else recent.push(object);
+                if(entry.moving)tracks++;else dots++;
+                if(entry.text)texts++;
+            }
+            const key=[historyVersion,width,height,zoom,yaw,pitch,panX,panY,Math.floor(time/((videoSlices&&active.size>300)||active.size>2000?2:.5)),settled.length].join(':');
+            if(!historyJob&&key!==historyKey){
+                historyBuffer.width=Math.round(width*scale);historyBuffer.height=Math.round(height*scale);
+                const paint=historyBuffer.getContext('2d');paint.setTransform(scale,0,0,scale,0,0);paint.clearRect(0,0,width,height);
+                paint.lineJoin='round';paint.lineCap=videoSlices?'butt':'round';
+                historyJob={key,ctx:paint,index:0,objects:settled,time,project};
+            }
+            if(historyReady)ctx.drawImage(historyCanvas,0,0,width,height);
+            else if(historyJob&&historyJob.index>0)ctx.drawImage(historyBuffer,0,0,width,height);
+            for(const {entry}of recent)paintEntry(entry,time,project);
+            canvas.dataset.visibleTexts=texts;canvas.dataset.time=time.toFixed(3);canvas.dataset.activeTracks=tracks;canvas.dataset.activeDots=dots;canvas.dataset.total=data.total;canvas.dataset.depthAxis='time';canvas.dataset.renderMs=(performance.now()-renderStart).toFixed(1);canvas.dataset.captionCacheMB=(captionPixels*4/1024/1024).toFixed(1);canvas.dataset.historyVersion=String(historyVersion);canvas.dataset.historyReady=String(historyReady);
+        }
+        function resize(){width=innerWidth;height=innerHeight;scale=videoSlices&&sliceView?.quality?sliceView.quality:Math.min(crispCaptions?2:1.5,devicePixelRatio||1);canvas.width=Math.round(width*scale);canvas.height=Math.round(height*scale);clearHistory();render();}
+        async function refresh(){
+            try{
+                const head=await fetch('trajectories-data.json',{method:'HEAD',cache:'no-store'});if(!head.ok)throw Error();
+                const stamp=head.headers.get('Last-Modified');if(stamp&&stamp===modified)return;
+                let owner=window;try{if(window.top.location.origin===location.origin)owner=window.top;}catch{}
+                const shared=owner.__eacTrajectoryDownloads||(owner.__eacTrajectoryDownloads=new Map());
+                const key=new URL('trajectories-data.json',location.href).href;
+                let download=shared.get(key);
+                if(!download||download.stamp!==stamp||(!stamp&&Date.now()-download.created>4000)){
+                    download={stamp,created:Date.now(),promise:fetch(key,{cache:'no-store'}).then(response=>{if(!response.ok)throw Error();return response.text();})};shared.set(key,download);
+                    const failed=download;download.promise.catch(()=>{if(shared.get(key)===failed)shared.delete(key);});
+                }
+                const value=JSON.parse(await download.promise);if(value.version!==2)throw Error();modified=stamp;
+                if(value.updatedAt!==revision){const time=current(),first=!data;captionPixels=0;data=value;data.entries.sort((a,b)=>a.start-b.start);revision=value.updatedAt;offset=first?(embedded&&hasParentClock?offset:0):time;origin=performance.now();previousTime=-1;clearHistory();render();}
+                document.getElementById('error').hidden=true;
+            }catch{document.getElementById('error').textContent='Unable to refresh trajectories. Retrying…';document.getElementById('error').hidden=false;}
+        }
+        canvas.addEventListener('wheel',event=>{event.preventDefault();if(embedded){parent.postMessage({type:'eac:zoom',yaw,delta:event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?innerHeight:1)},location.origin);return;}zoom=Math.max(1,Math.min(4,zoom*Math.exp(-event.deltaY*.001)));needsRender=true;},{passive:false});
+        let pinchScale=1;
+        addEventListener('gesturestart',event=>{if(!embedded)return;event.preventDefault();pinchScale=event.scale||1;},{passive:false});
+        addEventListener('gesturechange',event=>{if(!embedded)return;event.preventDefault();const scale=event.scale||1;parent.postMessage({type:'eac:zoom',yaw,delta:-Math.log(scale/pinchScale)*700},location.origin);pinchScale=scale;},{passive:false});
+        canvas.addEventListener('pointerdown',event=>{if(event.button!==0)return;gesture={x:event.clientX,yaw};canvas.setPointerCapture(event.pointerId);});
+        canvas.addEventListener('pointermove',event=>{
+            if(!gesture||(archiveVersion&&![18,19].includes(archiveVersion)))return;
+            yaw=gesture.yaw+(event.clientX-gesture.x)*.006;
+            pitch=0;
+            if(embedded)parent.postMessage({type:'eac:orientation',yaw},location.origin);
+            needsRender=true;
+        });
+        canvas.addEventListener('pointerup',()=>{gesture=null;needsRender=true;});canvas.addEventListener('pointercancel',()=>{gesture=null;needsRender=true;});canvas.addEventListener('lostpointercapture',()=>{gesture=null;needsRender=true;});
+        canvas.addEventListener('dblclick',()=>{if(embedded)parent.postMessage({type:'eac:reset-depth'},location.origin);zoom=1;panX=panY=0;yaw=0;pitch=0;if(embedded)parent.postMessage({type:'eac:orientation',yaw},location.origin);render();});
+        addEventListener('keydown',event=>{
+            if(event.key==='Escape'){if(embedded)parent.postMessage({type:'eac:return'},location.origin);else location.href='../';}
+            if(embedded)return;
+            if(event.code==='Space'){event.preventDefault();offset=current();origin=performance.now();paused=!paused;needsRender=true;}
+            if(event.key==='ArrowRight'){event.preventDefault();seek(current()+10);}
+            if(event.key==='ArrowLeft'){event.preventDefault();seek(current()-10);}
+            if(event.key==='Home'){event.preventDefault();seek(0);}
+        });
+        if(videoSlices)window.EACSliceRender=(view,clock)=>{
+            const previousQuality=sliceView?.quality,previous=current();
+            sliceView=view;yaw=view.yaw;zoom=view.zoom;panX=view.travel;
+            offset=clock.time;origin=performance.now();paused=clock.paused;embeddedVisible=true;needsRender=true;
+            if(Math.abs(offset-previous)>1){previousTime=-1;clearHistory();}
+            if(previousQuality!==view.quality)resize();else render();
+        };
+        addEventListener('message',event=>{
+            if(!embedded||event.source!==parent||event.origin!==location.origin)return;
+            if(videoSlices&&event.data?.type==='eac:slice-view'){
+                const previousQuality=sliceView?.quality;
+                sliceView=event.data;yaw=sliceView.yaw;zoom=sliceView.zoom;panX=sliceView.travel;needsRender=true;
+                if(previousQuality!==sliceView.quality)resize();
+                return;
+            }
+            if(event.data?.type==='eac:reset-view'){gesture=null;yaw=pitch=panX=panY=0;zoom=1;clearHistory();needsRender=true;return;}
+            if(event.data?.type==='eac:space-zoom'){
+                const value=Number(event.data.zoom);
+                if(Number.isFinite(value)){zoom=Math.max(1,Math.min(4,value));needsRender=true;}
+                return;
+            }
+            if(event.data?.type!=='eac:clock')return;
+            const time=Number(event.data.time);if(!Number.isFinite(time))return;hasParentClock=true;
+            if(window.EACTrajectorySurface?.setEnabled(event.data.surfaceVisible,event.data.deepInside))needsRender=true;
+            const wasVisible=embeddedVisible;
+            embeddedVisible=Boolean(event.data.visible);
+            const displayed=current(),jump=Math.abs(time-displayed)>1;
+            const playing=!Boolean(event.data.paused)&&embeddedVisible;
+            offset=!videoSlices&&playing&&!jump?Math.max(time,displayed):time;origin=performance.now();paused=!playing;
+            if(jump){previousTime=-1;clearHistory();}
+            if(embeddedVisible&&(!wasVisible||jump))needsRender=true;
+        });
+        addEventListener('resize',resize);
+        function tick(now){if(videoSlices){requestAnimationFrame(tick);return;}if(!embeddedVisible){requestAnimationFrame(tick);return;}advanceHistory();if((needsRender||!paused)&&now-lastFrame>=1000/((gesture||(videoSlices&&sliceView?.interacting))?60:30)-1){render();lastFrame=now;}requestAnimationFrame(tick);}
+        resize();refresh();setInterval(refresh,5000);requestAnimationFrame(tick);
+    </script>
+
+</body>
+</html>

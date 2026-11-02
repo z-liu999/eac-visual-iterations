@@ -1,0 +1,8 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EaC — Visual iterations</title><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:white}iframe{display:block;border:0;width:100%;height:100%;background:white}</style></head><body><div id="description" class="iteration-sr-only" aria-live="polite"></div><iframe id="preview" title="视觉迭代预览" allow="autoplay"></iframe><script src="iterations-data.js?v=20261029-retained-52"></script><script>
+const v=Math.max(1,Math.min(EAC_ITERATIONS.length,parseInt(new URLSearchParams(location.search).get('version'),10)||1));
+document.getElementById('description').textContent=String(v).padStart(2,'0')+' · '+EAC_ITERATIONS[v-1][0]+' — '+EAC_ITERATIONS[v-1][1]+'　｜依据保留代码重建 · 使用当前标注数据';
+const source=EAC_ITERATIONS[v-1][2];
+if(source===25)location.replace('zoom-space.html?variant=19&v=program-audit-113');
+else if(source===20)location.replace('zoom-space.html?v=20261029-retained-52');
+else document.getElementById('preview').src=source===24?'video-depth.html?notes=1&opaque=1':source===23?'video-depth.html?notes=1':source===22?'video-depth.html?fade=0':source===21?'video-depth.html':source>=13?'trajectories.html?archive='+source+'&v=archive-1':'../?classic=1&iteration='+source;
+</script><script src="iteration-nav.js?v=eleven-versions-14"></script></body></html>

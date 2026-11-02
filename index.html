@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Exhausting a Crowd — 学习复刻</title>
+        <script>if(window===window.top&&!new URLSearchParams(location.search).has('surface')&&!new URLSearchParams(location.search).has('classic'))location.replace('assets/zoom-space.html?v=20261029-retained-52');</script>
+        <link rel="stylesheet" href="assets/surface-view.css?v=20261029-retained-52">
+        <link rel="stylesheet" href="style.css?v=20261029-retained-52">
+     <link rel="stylesheet" href="visible-code.css?v=20261029-retained-52">
+</head>
+
+    <body>
+        <main id="stage" aria-label="观察画面，点击开始标注" tabindex="0">
+            <video id="video" autoplay muted playsinline loop preload="auto" disablepictureinpicture></video>
+            <canvas id="ascii-video" aria-hidden="true"></canvas>
+            <div id="box-model-overlay" aria-hidden="true">
+                <div class="model-container"><span>video-container</span></div>
+                <div class="model-video"><span>video-element</span></div>
+                <div class="model-annotation"><span>annotation-element</span></div>
+            </div>
+            <svg id="lines" aria-hidden="true"></svg>
+            <div id="notes"></div>
+        </main>
+
+        <!-- Figma：城市导航与右上角 V&A 标志。其他城市链接打开原作。 -->
+        <nav id="location-header" aria-label="Locations">
+            <strong aria-current="page">LONDON</strong><span> | </span><a href="https://www.exhaustingacrowd.com/netherlands" target="_blank" rel="noreferrer">NETHERLANDS</a><span> | </span><a href="https://www.exhaustingacrowd.com/birmingham" target="_blank" rel="noreferrer">BIRMINGHAM</a><span> | </span><a href="https://www.exhaustingacrowd.com/gwangju" target="_blank" rel="noreferrer">GWANGJU</a><span> | </span><a href="https://www.exhaustingacrowd.com/beijing" target="_blank" rel="noreferrer">BEIJING</a><span> | </span><a href="https://www.exhaustingacrowd.com/saintbrieuc" target="_blank" rel="noreferrer">SAINTBRIEUC</a><span> | </span><a href="https://www.exhaustingacrowd.com/berlin" target="_blank" rel="noreferrer">BERLIN</a>
+        </nav>
+
+        <button id="about" aria-label="About Exhausting a Crowd" title="ABOUT">
+            <img src="assets/va-logo.png" alt="V&amp;A" width="55" height="32">
+        </button>
+
+        <div id="sync-status" role="status" hidden></div>
+
+        <div id="hint" role="status">单击后输入文字；按住并拖动记录轨迹，松开后输入。</div>
+
+        <button id="rewind" aria-label="Rewind 10 seconds" title="REWIND 10SEC">
+            <img src="assets/rewind.png" alt="" width="128" height="128">
+            <span class="tooltip">REWIND 10SEC</span>
+        </button>
+        <time id="clock">15:00</time>
+
+        <!-- 输入状态：左下取消按钮替代回退，右侧为半屏输入面板。 -->
+        <button id="cancel" type="button" aria-label="Cancel note" title="CANCEL" hidden>
+            <img src="assets/cancel.png" alt="" width="128" height="128">
+            <span class="tooltip">CANCEL</span>
+        </button>
+
+        <form id="editor" aria-label="Add a note" hidden>
+            <label for="text">WHAT'S HAPPENING?</label>
+            <textarea id="text" maxlength="240" required placeholder="WHAT'S HAPPENING?" spellcheck="false"></textarea>
+            <pre id="editor-code" tabindex="0" aria-label="当前输入内容对应的代码"><code></code></pre>
+            <button id="submit-note" type="submit">TAKE NOTE</button>
+        </form>
+
+        <dialog id="information">
+            <h2>Exhausting a Crowd</h2>
+            <p>学习复刻 / 第二版</p>
+            <div class="project-actions">
+                <button id="history" type="button">HISTORY</button>
+                <button id="export" type="button">EXPORT NOTES</button>
+            </div>
+            <p>网站自动判断操作：单击后输入，文字固定展示；按住并拖动后松开，输入的文字沿轨迹移动。</p>
+            <p>视频持续播放，点击后放大至对应区域，输入期间也不会暂停。按 Esc 返回完整画面。</p>
+            <p>按住画面任意位置 → 拖动鼠标记录轨迹 → 松开鼠标 → 输入内容。发送后回到绘制起点前 2 秒播放，文字在对应视频时间沿轨迹移动。单击即可记录静止位置。键盘用户可在画面聚焦时按 Enter 在中心标注。</p>
+            <p>标注在对应视频时间出现，沿记录路径移动，并保存到服务器数据库，浏览器保留备份。网站固定播放一段视频，不提供上传或素材切换。</p>
+            <p>本版通过服务器共享标注，每 2 秒同步新内容。视频来自已下载的伦敦原作片段。</p>
+            <a href="https://www.exhaustingacrowd.com/london" target="_blank" rel="noreferrer">访问原作 ↗</a>
+            <button class="close">CLOSE</button>
+        </dialog>
+
+        <dialog id="archive">
+            <h2>观察记录</h2>
+            <ol id="list"></ol>
+            <button class="close">CLOSE</button>
+        </dialog>
+
+        <script src="media-config.js?v=20261029-retained-52"></script>
+        <script src="app.js?v=delta-notes-117"></script>
+        <div id="code-float" hidden aria-label="当前轨迹动作对应的代码示意">
+            <div id="code-metrics"></div>
+            <pre id="code-log"><code></code></pre>
+        </div>
+        <pre id="video-code" aria-label="视频当前播放状态的代码说明"><code></code></pre>
+        <pre id="clock-code" aria-label="右下角时间显示的代码说明"><code></code></pre>
+        <pre id="submit-result-code" hidden role="status" aria-label="标注提交成功"><code></code></pre>
+        <pre id="action-code" hidden aria-label="点击放大对应的代码"><code></code></pre>
+        <pre id="rewind-code" hidden aria-label="回退十秒的代码与跳转状态"><code></code></pre>
+        <button id="ascii-toggle" type="button" aria-pressed="true" title="切换字符画与原视频">查看原视频</button>
+        <a id="trajectories-open" href="assets/trajectories.html?v=20261029-retained-52" target="_blank" rel="noopener">VIEW ALL TRAILS</a>
+        <button id="observation-tour-start" type="button">TRY ATTENTION</button>
+        <section id="observation-tour" hidden aria-label="Text driven video effects">
+            <header class="effects-heading"><strong>WORDS → VISIBILITY</strong><button id="tour-exit" type="button">EXIT ×</button></header>
+            <div id="effects-status" role="status"></div>
+            <p id="effects-count">More overlapping observations make a place clearer.</p>
+            <div class="effects-controls"><button id="tour-pause" type="button">PAUSE</button><button id="effects-compare" type="button">SHOW ORIGINAL</button></div>
+
+            <small>Descriptions reveal their recorded locations. Unobserved areas fade.</small>
+        </section>
+        <script src="visible-code.js?v=20261029-retained-52"></script>
+        <script src="assets/surface-view.js?v=20261029-retained-52"></script>
+        <script src="assets/iterations-data.js?v=20261029-retained-52"></script>
+        <script src="assets/iteration-nav.js?v=20261029-retained-52"></script>
+        <script src="assets/iteration-view.js?v=20261029-retained-52"></script>
+
+    </body>
+
+</html>
