@@ -11,7 +11,7 @@ def main():
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir()
-    for name in ('index.html', 'app.js', 'style.css', 'visible-code.js',
+    for name in ('index.html', 'mouse-trail.html', 'app.js', 'style.css', 'visible-code.js',
                  'visible-code.css', 'observation-video-original-3min.mp4'):
         shutil.copy2(ROOT / name, OUT / name)
     shutil.copytree(ROOT / 'assets', OUT / 'assets')
