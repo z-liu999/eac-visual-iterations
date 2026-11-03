@@ -70,7 +70,7 @@
     }
     const livePlane=document.createElement('div'),liveSurface=document.createElement('iframe');
     Object.assign(livePlane.style,{position:'absolute',left:'50%',top:'50%',transformStyle:'preserve-3d',transformOrigin:'0 0',pointerEvents:'auto',backfaceVisibility:'hidden'});
-    liveSurface.src=host19?'about:blank':'../?surface=1&iteration='+(opaqueFrames?24:23)+'&v=original-video-126';liveSurface.title='Original video surface';liveSurface.allow='autoplay';
+    liveSurface.src=host19?'about:blank':'../?surface=1&iteration='+(opaqueFrames?24:23)+'&v=render-127';liveSurface.title='Original video surface';liveSurface.allow='autoplay';
     Object.assign(liveSurface.style,{width:innerWidth+'px',height:innerHeight+'px',border:'0',display:'block',transformOrigin:'0 0',pointerEvents:'auto'});
     livePlane.append(liveSurface);document.body.append(livePlane);
     liveSurface.addEventListener('load',()=>{
@@ -100,7 +100,7 @@
         canvas.dataset.videoSource='shared-surface';
     }
     if(host19){sharedSurface?.addEventListener('load',attachSharedVideo);setTimeout(attachSharedVideo,0);}
-    const noteFrame=document.createElement('iframe');noteFrame.src='trajectories.html?embedded=1&videoSlices=1&v=viewport-cull-87';noteFrame.title='Code time trajectories';Object.assign(noteFrame.style,{position:'absolute',inset:'0',width:'100%',height:'100%',border:'0',background:'transparent',pointerEvents:'none'});document.body.append(noteFrame);
+    const noteFrame=document.createElement('iframe');noteFrame.src='trajectories.html?embedded=1&videoSlices=1&v=render-127';noteFrame.title='Code time trajectories';Object.assign(noteFrame.style,{position:'absolute',inset:'0',width:'100%',height:'100%',border:'0',background:'transparent',pointerEvents:'none'});document.body.append(noteFrame);
     const dbReady=new Promise(resolve=>{const req=indexedDB.open('eac-video-slices',1);req.onupgradeneeded=()=>req.result.createObjectStore('frames');req.onsuccess=()=>resolve(req.result);req.onerror=()=>{persistenceError=true;resolve(null);};});
     window.EACVideoDepthView={getVideo(){return video;},setPresented(value){if(!host19)return;hostPresented=Boolean(value);dirty=true;if(!hostPresented){const retained=[...detail.entries()].sort((a,b)=>b[1].used-a[1].used);for(const [key,item]of retained.slice(12)){gl.deleteTexture(item.texture);detail.delete(key);}livePlane.style.visibility='hidden';}},set(value){if(Number.isFinite(value.yaw))yaw=value.yaw;if(Number.isFinite(value.zoom))zoom=Math.max(1,Math.min(22.8,value.zoom));if(Number.isFinite(value.travel))travel=value.travel;dirty=true;},get(){return {yaw,zoom,travel};}};
     const run=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
@@ -240,29 +240,31 @@
     }
     const planeSize=()=>({w:2*2.975*(innerWidth/innerHeight)/5.7,h:2*2.975/5.7});
     function lowerBound(time){let l=0,r=records.length;while(l<r){const m=(l+r)>>1;if(records[m].time<time)l=m+1;else r=m;}return l;}
+    let rangeLo=0,rangeHi=Infinity;
+    function intersectRange(origin,delta,min,max){
+        if(Math.abs(delta)<1e-8)return origin>=min&&origin<=max;
+        let a=(min-origin)/delta,b=(max-origin)/delta;
+        if(a>b){const swap=a;a=b;b=swap;}
+        rangeLo=Math.max(rangeLo,a);rangeHi=Math.min(rangeHi,b);return true;
+    }
     window.EACSliceOcclusion=(x,y,time)=>{
         const {cam,c,s,plane}=rayContext||{cam:5.1-travel,c:Math.cos(yaw),s:Math.sin(yaw),plane:planeSize()},cx=-cam*s,cz=cam*c;
         const px=(x-.5)*plane.w,py=(.5-y)*plane.h,pz=2.125-(video.currentTime-time)*.6;
         const distance=cam-(-px*s+pz*c);
         if(distance<=.06)return 0;
-        let lo=.06/distance,hi=1-1e-5;
-        for(const [origin,delta,half]of [[cx,px-cx,plane.w/2],[0,py,plane.h/2]]){
-            if(Math.abs(delta)<1e-8){if(Math.abs(origin)>half)return 1;continue;}
-            let a=(-half-origin)/delta,b=(half-origin)/delta;if(a>b)[a,b]=[b,a];lo=Math.max(lo,a);hi=Math.min(hi,b);
-        }
+        rangeLo=.06/distance;rangeHi=1-1e-5;
+        if(!intersectRange(cx,px-cx,-plane.w/2,plane.w/2)||!intersectRange(0,py,-plane.h/2,plane.h/2))return 1;
+        const lo=rangeLo,hi=rangeHi;
         if(lo>=hi)return 1;
         const a=cz+(pz-cz)*lo,b=cz+(pz-cz)*hi;
         if(2.125>=Math.min(a,b)&&2.125<=Math.max(a,b))return 0;
         const left=lowerBound(video.currentTime+(Math.min(a,b)-2.125)/.6),right=lowerBound(video.currentTime+(Math.max(a,b)-2.125)/.6);
         if(right<=left)return 1;if(opaquePrefix[right]>opaquePrefix[left])return 0;
         const lowZ=2.125-(video.currentTime-(records[0]?.time||0))*.6,highZ=-.875;
-        let start=0,end=Infinity;
-        if(highZ>lowZ){
-            for(const [origin,delta,min,max]of [[cx,px-cx,-plane.w/2,plane.w/2],[0,py,-plane.h/2,plane.h/2],[cz,pz-cz,lowZ,highZ]]){
-                if(Math.abs(delta)<1e-8){if(origin<min||origin>max){end=-1;break;}continue;}
-                let a=(min-origin)/delta,b=(max-origin)/delta;if(a>b)[a,b]=[b,a];start=Math.max(start,a);end=Math.min(end,b);
-            }
-        }else end=-1;
+        rangeLo=0;rangeHi=Infinity;
+        let end=-1;
+        if(highZ>lowZ&&intersectRange(cx,px-cx,-plane.w/2,plane.w/2)&&intersectRange(0,py,-plane.h/2,plane.h/2)&&intersectRange(cz,pz-cz,lowZ,highZ))end=rangeHi;
+        const start=rangeLo;
         const layers=end>start?Math.abs((end-start)*(pz-cz))/.06+1:1,density=Math.max(1,layers/6);
         const sidePosition=Math.max(0,Math.min(1,(.8-Math.abs(c))/.3));
         const sideWeight=sidePosition*sidePosition*(3-2*sidePosition);
@@ -276,12 +278,10 @@
         const {cam,c,s,plane}=rayContext,cx=-cam*s,cz=cam*c;
         const px=(x-.5)*plane.w,py=(.5-y)*plane.h,pz=2.125-(video.currentTime-time)*.6;
         const lowZ=2.125-(video.currentTime-(records[0]?.time||0))*.6,highZ=-.875;
-        let lo=0,hi=Infinity;
         if(highZ<=lowZ)return alpha;
-        for(const [origin,delta,min,max]of [[cx,px-cx,-plane.w/2,plane.w/2],[0,py,-plane.h/2,plane.h/2],[cz,pz-cz,lowZ,highZ]]){
-            if(Math.abs(delta)<1e-8){if(origin<min||origin>max)return alpha;continue;}
-            let a=(min-origin)/delta,b=(max-origin)/delta;if(a>b)[a,b]=[b,a];lo=Math.max(lo,a);hi=Math.min(hi,b);
-        }
+        rangeLo=0;rangeHi=Infinity;
+        if(!intersectRange(cx,px-cx,-plane.w/2,plane.w/2)||!intersectRange(0,py,-plane.h/2,plane.h/2)||!intersectRange(cz,pz-cz,lowZ,highZ))return alpha;
+        const lo=rangeLo,hi=rangeHi;
         const layers=hi>lo?Math.abs((hi-lo)*(pz-cz))/.06+1:1,density=Math.max(1,layers/6);
         return 1-Math.pow(Math.max(.000001,1-alpha),1/density);
     };

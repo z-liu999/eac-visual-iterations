@@ -562,9 +562,8 @@ function getNoteElements(note) {
         $('lines').append(line);
         elements = { label, line, code: label, note };
         noteElements.set(note.id, elements);
+        window.EACVisibleCode?.renderNote(label, note, 'translate(0px, 0px)', current(), noteEndTime(note));
     }
-    window.EACVisibleCode?.renderNote(elements.label, note,
-        elements.label.style.transform || 'translate(0px, 0px)', current(), noteEndTime(note));
     return elements;
 }
 
@@ -716,11 +715,14 @@ function previewDraft() {
     zoomAt(p, false);
 }
 
-function tick() {
+let lastNoteRender = -Infinity;
+function tick(now) {
     previewDraft();
     const displayClock = clock(current()).slice(0,5);
     if ($('clock').textContent !== displayClock) $('clock').textContent = displayClock;
-    renderNotes();
+    let inSlices = false;
+    try { inSlices = window.top.EACPortal19?.onZoom() || false; } catch {}
+    if (!inSlices || now - lastNoteRender >= 1000 / 30) { renderNotes(); lastNoteRender = now; }
     requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);

@@ -217,7 +217,8 @@
                                 let previous=start,runAlpha=-1,pathOpen=false;
                                 for(let step=1;step<=steps;step++){
                                     const ratio=step/steps,middleRatio=(step-.5)/steps;
-                                    const point=from.map((v,j)=>v+(to[j]-v)*ratio),middle=from.map((v,j)=>v+(to[j]-v)*middleRatio),nextPoint=project(...point);
+                                    const dx=to[0]-from[0],dy=to[1]-from[1],dt=to[2]-from[2];
+                                    const point=[from[0]+dx*ratio,from[1]+dy*ratio,from[2]+dt*ratio],middle=[from[0]+dx*middleRatio,from[1]+dy*middleRatio,from[2]+dt*middleRatio],nextPoint=project(...point);
                                     const near=start.distance+(end.distance-start.distance)*middleRatio,nearAlpha=Math.max(0,Math.min(1,(near-.06)/.18));
                                     const visibility=nearAlpha>0?sliceVisibility(middle):0;
                                     let lineAlpha=baseLineOpacity;
