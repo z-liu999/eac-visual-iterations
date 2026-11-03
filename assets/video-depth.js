@@ -8,7 +8,7 @@
     }
     const fadeFrames=new URLSearchParams(location.search).get('fade')!=='0';
     const canvas=document.getElementById('frames'),video=document.getElementById('video'),status=document.getElementById('status');
-    video.src=video.dataset.src;video.load();
+    if(window.EACMediaLoader){window.EACMediaLoader.prepare(video.dataset.src).then(source=>{video.src=source;video.load();}).catch(()=>{status.textContent='Unable to load video. Please refresh to retry.';});}else{video.src=video.dataset.src;video.load();}
     const gl=canvas.getContext('webgl',{alpha:false,antialias:true});
     if(!gl){status.textContent='WebGL is required to view video frames in depth.';return;}
     function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}

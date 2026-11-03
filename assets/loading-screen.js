@@ -39,7 +39,7 @@
     }
     addEventListener('resize',()=>{if(!overlay.hidden){stopMotion();startMotion();}});
     reduced.addEventListener('change',()=>{if(!overlay.hidden){stopMotion();startMotion();}});
-    let video=null,shownOnce=false,lastTime=-1,lastAdvance=performance.now(),state='buffering',resumeTime=0,ownsPause=false,checking=false;
+    let video=null,shownOnce=false,lastTime=-1,lastAdvance=performance.now(),state='buffering',resumeTime=0,ownsPause=false,checking=false,waitingSince=0;
     function show(){overlay.hidden=false;startMotion();document.body.setAttribute('aria-busy','true');}
     function hide(){overlay.hidden=true;if(motionActive)stopMotion();document.body.setAttribute('aria-busy','false');shownOnce=true;state='visible';}
     function bufferedAhead(){
@@ -64,7 +64,8 @@
             overlay.dataset.bufferedAhead=ahead.toFixed(2);overlay.dataset.phase=state;
             const waiting=video.seeking||video.readyState<3||(!video.paused&&!video.ended&&now-lastAdvance>1000);
             if(state==='visible'){
-                if((!video.paused&&waiting)||pendingView())enterBuffer();
+                if(!video.paused&&waiting){waitingSince ||= now;if(now-waitingSince>=(video.currentSrc.startsWith('blob:')?1500:250))enterBuffer();}else waitingSince=0;
+                if(pendingView())enterBuffer();
                 return;
             }
             show();
@@ -87,7 +88,8 @@
         const next=front.contentDocument?.getElementById('video');
         if(!next||next===video)return;
         video=next;shownOnce=false;state='buffering';ownsPause=true;lastTime=video.currentTime;lastAdvance=performance.now();show();
-        for(const type of ['waiting','seeking','emptied','error'])video.addEventListener(type,()=>{if(!video.paused||!shownOnce)enterBuffer();inspect();});
+        for(const type of ['waiting','seeking'])video.addEventListener(type,()=>{if(!shownOnce)enterBuffer();inspect();});
+        for(const type of ['emptied','error'])video.addEventListener(type,()=>{waitingSince=0;if(!video.paused||!shownOnce)enterBuffer();inspect();});
         for(const type of ['playing','seeked','canplay','progress','loadedmetadata','pause','play'])video.addEventListener(type,inspect);
         inspect();
     }

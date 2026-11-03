@@ -771,7 +771,7 @@ async function loadVideoSource(restoreTime = false) {
     const resumeAt = restoreTime ? current() : 0;
     try {
         const response = window.EAC_MEDIA_CONFIG?.staticMode ? null : await fetch('/api/media', { cache : 'no-store' });
-        let source = VIDEO_URL;
+        let source = window.EACMediaLoader ? await window.EACMediaLoader.prepare(VIDEO_URL) : VIDEO_URL;
         if (response?.ok) {
             const media = await response.json();
             source = media.url || VIDEO_URL;
@@ -779,7 +779,7 @@ async function loadVideoSource(restoreTime = false) {
             throw new Error('Media service unavailable');
         }
         // Pixel sampling requires a same-origin video until R2 CORS is configured.
-        if ($('ascii-video')) {
+        if ($('ascii-video') && !source.startsWith('blob:')) {
             const pixelSource = new URL(VIDEO_URL, location.href);
             if (pixelSource.origin === location.origin) source = pixelSource.href;
         }
