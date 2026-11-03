@@ -167,7 +167,7 @@ class Handler(SimpleHTTPRequestHandler):
         path = Path(self.translate_path(self.path)).resolve()
         # Serve only public website files; never expose the database or source.
         relative = path.relative_to(ROOT) if path.is_relative_to(ROOT) else None
-        if relative is None or not (str(relative) in ('.', 'index.html', 'style.css', 'app.js', 'visible-code.css', 'visible-code.js', 'media-config.js', 'observation-video.webm', 'observation-video-1080p.mp4')
+        if relative is None or not (str(relative) in ('.', 'index.html', 'style.css', 'app.js', 'visible-code.css', 'visible-code.js', 'media-config.js', 'observation-video.webm', 'observation-video-original-3min.mp4')
                                     or (relative.parts[0] == 'assets' and path.is_file())):
             self.send_error(404)
             return None

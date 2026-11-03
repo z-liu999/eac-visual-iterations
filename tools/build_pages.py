@@ -12,12 +12,12 @@ def main():
         shutil.rmtree(OUT)
     OUT.mkdir()
     for name in ('index.html', 'app.js', 'style.css', 'visible-code.js',
-                 'visible-code.css', 'observation-video-1080p.mp4'):
+                 'visible-code.css', 'observation-video-original-3min.mp4'):
         shutil.copy2(ROOT / name, OUT / name)
     shutil.copytree(ROOT / 'assets', OUT / 'assets')
     (OUT / '.nojekyll').touch()
     (OUT / 'media-config.js').write_text(
-        'window.EAC_MEDIA_CONFIG={"videoUrl":"observation-video-1080p.mp4","staticMode":true};\n')
+        'window.EAC_MEDIA_CONFIG={"videoUrl":"observation-video-original-3min.mp4","staticMode":true};\n')
     with sqlite3.connect(ROOT / 'data/notes.sqlite3') as connection:
         notes = [json.loads(row[0]) for row in connection.execute(
             'SELECT payload FROM notes WHERE start<=180.02 AND end>=0 ORDER BY start,id')]

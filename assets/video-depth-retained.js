@@ -70,7 +70,7 @@
     }
     const livePlane=document.createElement('div'),liveSurface=document.createElement('iframe');
     Object.assign(livePlane.style,{position:'absolute',left:'50%',top:'50%',transformStyle:'preserve-3d',transformOrigin:'0 0',pointerEvents:'auto',backfaceVisibility:'hidden'});
-    liveSurface.src=host19?'about:blank':'../?surface=1&iteration='+(opaqueFrames?24:23)+'&v=complete-video-125';liveSurface.title='Original video surface';liveSurface.allow='autoplay';
+    liveSurface.src=host19?'about:blank':'../?surface=1&iteration='+(opaqueFrames?24:23)+'&v=original-video-126';liveSurface.title='Original video surface';liveSurface.allow='autoplay';
     Object.assign(liveSurface.style,{width:innerWidth+'px',height:innerHeight+'px',border:'0',display:'block',transformOrigin:'0 0',pointerEvents:'auto'});
     livePlane.append(liveSurface);document.body.append(livePlane);
     liveSurface.addEventListener('load',()=>{

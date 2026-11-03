@@ -1,6 +1,6 @@
 (() => {
     const sharedNotes=new URLSearchParams(location.search).has('notes');
-    if(sharedNotes){const script=document.createElement('script');script.src='video-depth-retained.js?v=complete-video-125';document.body.append(script);return;}
+    if(sharedNotes){const script=document.createElement('script');script.src='video-depth-retained.js?v=original-video-126';document.body.append(script);return;}
     const withNotes=false;
     let noteFrame=null;
     if(sharedNotes){

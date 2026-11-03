@@ -4,7 +4,7 @@ All 19 visual experiments, including binary video, box models, editable annotati
 
 ## Video
 
-All versions share the included first 3 minutes of video (1080p H.264, approximately 28.4 MB), playing on a loop. The full-length original is excluded. Existing annotation data is preserved; annotations outside the excerpt remain stored but cannot play within this excerpt.
+All versions share the included first 3 minutes of video (original-quality 1080p H.264 without re-encoding, approximately 79 MB), playing on a loop. The full-length original is excluded. Existing annotation data is preserved; annotations outside the excerpt remain stored but cannot play within this excerpt.
 
 ## Run
 
