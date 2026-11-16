@@ -96,7 +96,7 @@
         if(delay)previewTimer=setTimeout(display,delay);else display();
     }
     function makeLink(index,full){
-        const n=index+1,[name]=entries[index],link=document.createElement('a');link.href=file(entries[index][2]===26?'zoom-space.html?variant=20&v=writing-131':entries[index][2]===25?'zoom-space.html?variant=19&v=program-audit-113':entries[index][2]===20?'zoom-space.html?v=20261028-full-space-29':'iterations.html?version='+n);link.target='_top';
+        const n=index+1,[name]=entries[index],link=document.createElement('a');link.href=file(entries[index][2]===26?'zoom-space.html?variant=20&v=writing-132':entries[index][2]===25?'zoom-space.html?variant=19&v=program-audit-113':entries[index][2]===20?'zoom-space.html?v=20261028-full-space-29':'iterations.html?version='+n);link.target='_top';
         link.setAttribute('aria-label','第 '+n+' 次 · '+name);if(n===version)link.setAttribute('aria-current','page');
         if(full){
             const image=document.createElement('img');image.dataset.src=file('iteration-previews/'+String(entries[index][2]).padStart(2,'0')+'.jpg');image.alt='';image.width=128;image.height=72;image.loading='lazy';image.decoding='async';

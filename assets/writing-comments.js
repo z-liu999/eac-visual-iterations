@@ -29,23 +29,37 @@
             let reading=false;for(const type of ['pointerenter','focusin'])box.addEventListener(type,()=>reading=true);
             for(const type of ['pointerleave','focusout'])box.addEventListener(type,()=>reading=false);
             for(const type of ['wheel','pointerdown','keydown','gesturestart','gesturechange'])box.addEventListener(type,e=>e.stopPropagation());
-            return {box,line,i,get reading(){return reading;},x:0,y:0,placed:false};
+            return {box,line,i,get reading(){return reading;},x:0,y:0,vx:0,vy:0,turnIn:0,placed:false};
         });
-        const video=document.getElementById('video'),reduced=matchMedia('(prefers-reduced-motion: reduce)');
-        function paint(){
-            const w=layer.clientWidth,h=layer.clientHeight,t=reduced.matches?0:video.currentTime;
+        const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+        let lastTime=0;
+        function chooseDirection(item){
+            const angle=Math.random()*Math.PI*2,speed=90+Math.random()*70;
+            item.vx=Math.cos(angle)*speed;item.vy=Math.sin(angle)*speed;
+            item.turnIn=.8+Math.random()*1.6;
+        }
+        function paint(now){
+            const dt=lastTime?Math.min(.05,(now-lastTime)/1000):0;lastTime=now;
+            const w=layer.clientWidth,h=layer.clientHeight;
             for(const item of items){
                 const {box,line,i}=item,bw=box.offsetWidth,bh=box.offsetHeight;
-                if(!item.reading||!item.placed){
-                    const center=[.18,.50,.82][i],height=[.20,.36,.23][i];
-                    item.x=Math.max(6,Math.min(w-bw-6,w*(center+.012*Math.sin(t*.16+i))-bw/2));
-                    item.y=Math.max(62,Math.min(h-bh-70,h*(height+.018*Math.sin(t*.13+i*2))));item.placed=true;
+                const minX=6,maxX=Math.max(minX,w-bw-6),minY=62,maxY=Math.max(minY,h-bh-65);
+                if(!item.placed){
+                    item.x=Math.max(minX,Math.min(maxX,w*[.18,.50,.82][i]-bw/2));
+                    item.y=minY+Math.random()*(maxY-minY);item.placed=true;chooseDirection(item);
                 }
+                if(!item.reading&&!reduced.matches){
+                    item.turnIn-=dt;if(item.turnIn<=0)chooseDirection(item);
+                    item.x+=item.vx*dt;item.y+=item.vy*dt;
+                    if(item.x<=minX||item.x>=maxX)item.vx=(item.x<=minX?1:-1)*Math.abs(item.vx);
+                    if(item.y<=minY||item.y>=maxY)item.vy=(item.y<=minY?1:-1)*Math.abs(item.vy);
+                }
+                item.x=Math.max(minX,Math.min(maxX,item.x));item.y=Math.max(minY,Math.min(maxY,item.y));
                 box.style.transform=`translate(${item.x}px,${item.y}px)`;
-                const right=i!==2,anchorX=Math.max(0,Math.min(w,item.x+(right?bw+24:-24)+12*Math.sin(t*.11+i)));
-                const anchorY=Math.min(h-12,item.y+bh+30);
+                const right=item.vx>=0;
                 line.setAttribute('x1',item.x+(right?bw:0));line.setAttribute('y1',item.y+bh);
-                line.setAttribute('x2',anchorX);line.setAttribute('y2',anchorY);
+                line.setAttribute('x2',Math.max(0,Math.min(w,item.x+(right?bw+30:-30))));
+                line.setAttribute('y2',Math.min(h-12,item.y+bh+30));
             }
             requestAnimationFrame(paint);
         }
