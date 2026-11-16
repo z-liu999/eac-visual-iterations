@@ -3,7 +3,7 @@
     const query=new URLSearchParams(location.search);
     const archive=location.pathname.endsWith('/iterations.html'),portal=location.pathname.endsWith('/zoom-space.html');
     const entries=window.EAC_ITERATIONS||[],count=entries.length;
-    const version=portal?entries.findIndex(entry=>entry[2]===(query.get('variant')==='19'?25:20))+1:archive?Math.max(1,Math.min(count,Number(query.get('version'))||1)):entries.findIndex(entry=>entry[2]===Number(query.get('iteration')))+1;
+    const version=window.EAC_NO_ANNOTATIONS?20:portal?entries.findIndex(entry=>entry[2]===(query.get('variant')==='20'?26:query.get('variant')==='19'?25:20))+1:archive?Math.max(1,Math.min(count,Number(query.get('version'))||1)):entries.findIndex(entry=>entry[2]===Number(query.get('iteration')))+1;
     const sheet=document.createElement('link');sheet.rel='stylesheet';sheet.href=file('iteration-navigation.css?v=selected-line-34');document.head.append(sheet);
     let host=document.getElementById('location-header');
     if(!host&&(archive||portal)){host=document.createElement('div');host.id='iteration-brand';document.body.append(host);}
@@ -96,7 +96,7 @@
         if(delay)previewTimer=setTimeout(display,delay);else display();
     }
     function makeLink(index,full){
-        const n=index+1,[name]=entries[index],link=document.createElement('a');link.href=file(entries[index][2]===25?'zoom-space.html?variant=19&v=program-audit-113':entries[index][2]===20?'zoom-space.html?v=20261028-full-space-29':'iterations.html?version='+n);link.target='_top';
+        const n=index+1,[name]=entries[index],link=document.createElement('a');link.href=file(entries[index][2]===26?'zoom-space.html?variant=20&v=iteration-20-128':entries[index][2]===25?'zoom-space.html?variant=19&v=program-audit-113':entries[index][2]===20?'zoom-space.html?v=20261028-full-space-29':'iterations.html?version='+n);link.target='_top';
         link.setAttribute('aria-label','第 '+n+' 次 · '+name);if(n===version)link.setAttribute('aria-current','page');
         if(full){
             const image=document.createElement('img');image.dataset.src=file('iteration-previews/'+String(entries[index][2]).padStart(2,'0')+'.jpg');image.alt='';image.width=128;image.height=72;image.loading='lazy';image.decoding='async';

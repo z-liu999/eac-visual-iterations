@@ -62,6 +62,7 @@ function noteEndTime(note) {
 }
 
 function loadNotes() {
+    if (window.EAC_NO_ANNOTATIONS) { notes = []; return; }
     try {
         notes = JSON.parse(localStorage.getItem('eac:' + mediaKey) || '[]');
         if (!Array.isArray(notes)) notes = [];
@@ -76,6 +77,7 @@ function loadNotes() {
 }
 
 function persist() {
+    if (window.EAC_NO_ANNOTATIONS) return;
     try {
         localStorage.setItem('eac:' + mediaKey, JSON.stringify(notes.filter(note => !note.source?.originalId)));
     } catch {
@@ -111,6 +113,7 @@ function syncStatus(text) {
 }
 
 async function syncNotes() {
+    if (window.EAC_NO_ANNOTATIONS) return;
     if (syncing) return;
     syncing = true;
     let resyncAfterSeek = false;
@@ -267,6 +270,7 @@ function point(e) {
 // ========================================
 
 function begin(p) {
+    if (window.EAC_NO_ANNOTATIONS) return;
     if (draft) return;
     if (video.readyState < 2) {
         message('视频下载完成并加载后，即可开始标注。');

@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="annotation-mode.js?v=iteration-20-128"></script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>EaC — Time in depth</title>
@@ -335,6 +336,11 @@
         }
         function resize(){width=innerWidth;height=innerHeight;scale=videoSlices&&sliceView?.quality?sliceView.quality:Math.min(crispCaptions?2:1.5,devicePixelRatio||1);canvas.width=Math.round(width*scale);canvas.height=Math.round(height*scale);clearHistory();render();}
         async function refresh(){
+            if(window.EAC_NO_ANNOTATIONS){
+                if(!data){data={version:2,duration:180.0132,entries:[],total:0,tracks:0,dots:0};needsRender=true;render();}
+                document.getElementById('error').hidden=true;
+                return;
+            }
             try{
                 const head=await fetch('trajectories-data.json',{method:'HEAD',cache:'no-store'});if(!head.ok)throw Error();
                 const stamp=head.headers.get('Last-Modified');const localRevision=window.EACStaticStore?.revision()||'';if(stamp&&stamp+localRevision===modified)return;

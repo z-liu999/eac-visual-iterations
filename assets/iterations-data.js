@@ -93,5 +93,10 @@ window.EAC_ITERATIONS=[
     "Hold Space to Enter Time Depth",
     "基于 14；按住空格进入 17 的视频与代码时间轨迹，松开返回表层。",
     25
+  ] ,
+  [
+    "Time Depth Without Annotations",
+    "基于 19，移除全部用户留言、连线与轨迹；保留视频时间切片和空格进入操作。",
+    26
   ]
 ];
