@@ -1,0 +1,47 @@
+[
+  {
+    "title": "Draft 1 — Learning to Think Through Code",
+    "paragraphs": [
+      "In the first week, I chose to recreate Kyle McDonald's Exhausting a Crowd. I was interested in how the project explores surveillance, observation, and power. Users can follow people in public spaces, record their behaviour, and even invent stories about them. I was also interested in how the website allows people to interact with the video.",
+      "I learned HTML and CSS through Kevin Powell's tutorials and used Codex to help me write JavaScript. Within one week, I recreated the website almost exactly in its visual appearance.",
+      "However, I realised that I had been too focused on copying the original website. I hadn't thought much about programming as a tool.",
+      "Compared with Illustrator or Photoshop, programming feels very different. Instead of directly manipulating images, I need to describe positions, sizes, colours, and behaviours through code.",
+      "This made me wonder: What does programming allow me to see or understand differently? How does the structure of code influence the way I design?",
+      "For my next experiment, I want to rebuild the website by writing the code myself. I also want to explore what happens when the code behind the interface becomes visible to users."
+    ]
+  },
+  {
+    "title": "Draft 2 — Making the Invisible Visible",
+    "paragraphs": [
+      "In the second week, I rebuilt Exhausting a Crowd by writing the code myself. Through this process, I began to think more critically about programming as a design tool.",
+      "Louis Althusser's Ideology and Ideological State Apparatuses inspired me to think about how systems can influence our actions without us always being aware of them.¹ Although ideology and programming are different, I noticed a possible connection. When we use a website, we usually focus on what we see and do, rather than the code organising our experience.",
+      "This made me wonder: Could I make the invisible code behind the website visible?",
+      "At first, I converted users' annotations into JavaScript-like text. I also changed the video into binary and box-model representations. However, I soon realised that these experiments had not changed how the website worked. They had only created a different visual style.",
+      "I then read Gilbert Simondon's On the Mode of Existence of Technical Objects. Simondon suggests that people can use technology very well without necessarily understanding its internal structure.² This made me question whether showing code was really helping users understand technology.",
+      "I tried allowing users to edit the code to control the direction, size, and opacity of text. I also experimented with turning mouse movements into code and making the video appear when users moved their mouse across the screen.",
+      "But I realised that these experiments either changed the visual appearance or introduced new ways of interacting with the website. They did not necessarily make the underlying operation easier to understand.",
+      "Barbara Bolt's The Magic is in Handling offers another way of thinking about this process. Bolt discusses how knowledge can emerge through artistic practice and the experience of working with materials.³ Looking back, I realised that these unsuccessful experiments were helping me understand what I was actually interested in.",
+      "The Conditional Design Manifesto also provides a useful perspective. Its authors emphasise process, logic, and input, suggesting that design can emerge through rules and conditions rather than only through predetermined visual outcomes.⁴",
+      "This made me think about how programming records and organises human actions. For example, when users draw a line to follow someone in the video, the program records a series of changing positions.",
+      "I began removing elements from the original website, leaving only the movement traces, text, and coordinates. I also experimented with classifying these traces into four colour groups.",
+      "I realised that I did not necessarily want users to learn how to code. Instead, I wanted them to recognise that when they interact with a digital tool, the technology itself is also operating.",
+      "My next question is: How can I make the structure behind a digital interface something that users can perceive, rather than simply turning code into another visual style?"
+    ]
+  },
+  {
+    "title": "Draft 3 — From Making Code Visible to Thinking Through Code",
+    "paragraphs": [
+      "When I first started programming, I saw code mainly as a tool for producing visual results. Unlike Illustrator or Photoshop, programming required me to translate ideas into coordinates, sizes, and rules. Through three weeks of iterating Kyle McDonald's Exhausting a Crowd, however, I began to understand that technology does not simply execute ideas. It can also change how ideas develop.",
+      "In the first week, I focused on recreating the original website. In the second week, Louis Althusser's Ideology and Ideological State Apparatuses inspired me to think about systems that shape our actions without always being noticed.¹ Although ideology and programming are different, I saw a possible connection: users interact with a website without necessarily recognising the rules organising their experience.",
+      "I therefore tried making the hidden code visible. I converted annotations into JavaScript-like text and represented video through binary code and box-model structures. However, these experiments mainly changed the website's visual appearance.",
+      "Gilbert Simondon's On the Mode of Existence of Technical Objects helped me reconsider this approach. Simondon argues that understanding technology requires more than knowing how to use it.² I realised that showing code was not necessarily the same as making its operation understandable.",
+      "In the third week, inspired by a classmate's experiment with transparent paper, I added a Z-axis to the movement traces of annotations. Users could now zoom into a space behind the webpage. While developing this, I realised that video consists of individual frames, which could also be arranged along the Z-axis. This allowed traces to pass through different moments of the video.",
+      "Barbara Bolt's The Magic is in Handling helped me understand this unexpected discovery. Bolt argues that artistic knowledge can emerge through working with materials and tools.³ I had not planned to create a space containing video frames. The idea emerged through experimenting with coordinates and spatial relationships.",
+      "The Conditional Design Manifesto offers another perspective. Its authors emphasise process, logic, and input rather than focusing only on finished forms.⁴ This relates to my later experiments, where rules governing time, position, sampling, and interaction determined what users could see.",
+      "However, an important question remains. Am I actually revealing how the website works? The three-dimensional spaces are not accurate representations of its internal computational processes. They are visual interpretations of selected relationships within the system.",
+      "I gradually realised that I do not necessarily need to reveal the website's actual internal structure. Instead, I want to make aspects of its operation perceptible through visual design.",
+      "Looking back, I also noticed a change in my relationship with programming. Initially, its abstract rules felt like restrictions. Later, those same rules allowed me to create visual relationships I had never imagined before.",
+      "Programming is therefore not only a tool for realising my ideas. Through making, testing, and questioning, it also becomes a way of developing them."
+    ]
+  }
+]

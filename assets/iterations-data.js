@@ -95,8 +95,8 @@ window.EAC_ITERATIONS=[
     25
   ] ,
   [
-    "Video Only",
-    "仅播放视频，不显示用户留言，不提供内部空间或时间切片入口。",
+    "Writing as Annotations",
+    "三个 writing draft 以黑底白字和连线模拟用户留言；不显示旧留言、内部空间或切片。",
     26
   ]
 ];
