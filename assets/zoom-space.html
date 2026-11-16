@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script src="annotation-mode.js?v=iteration-20-129"></script>
+<script src="annotation-mode.js?v=iteration-20-130"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EaC — Beneath the surface</title>
@@ -11,27 +11,32 @@
 </head>
 <body>
 <div id="viewport"><div id="space">
-<div id="inside" class="face"><iframe id="trails-frame" title="Time and annotation trajectories" src="trajectories.html?embedded=1&v=iteration-20-129"></iframe></div>
+<div id="inside" class="face"><iframe id="trails-frame" title="Time and annotation trajectories" data-src="trajectories.html?embedded=1&v=iteration-20-130"></iframe></div>
 <div id="edges"><i class="edge"></i><i class="edge"></i><i class="edge"></i><i class="edge"></i></div>
-<div id="surface" class="face"><iframe id="surface-frame" title="Exhausting a Crowd video and annotations" src="../?surface=1&v=iteration-20-129"></iframe><div id="surface-border"></div></div>
+<div id="surface" class="face"><iframe id="surface-frame" title="Exhausting a Crowd video and annotations" data-src="../?surface=1&v=iteration-20-130"></iframe><div id="surface-border"></div></div>
 </div></div>
 <div id="loading" role="status" aria-live="polite"><span id="loading-label">LOADING…</span></div>
 <script>
-// Give annotation-free child pages distinct URLs, independent of cached version 19 pages.
-if (window.EAC_NO_ANNOTATIONS) {
-    for (const id of ['surface-frame', 'trails-frame']) {
-        const frame = document.getElementById(id), url = new URL(frame.src);
-        url.searchParams.set('annotations', 'off');
-        url.searchParams.set('v', 'iteration-20-129');
-        frame.src = url.href;
-    }
+// Load only the video surface for iteration 20; other versions retain their depth view.
+const videoOnly = new URLSearchParams(location.search).get('variant') === '20';
+for (const id of ['surface-frame', 'trails-frame']) {
+    const frame = document.getElementById(id);
+    if (videoOnly && id === 'trails-frame') { frame.remove(); continue; }
+    const url = new URL(frame.dataset.src, location.href);
+    if (window.EAC_NO_ANNOTATIONS) url.searchParams.set('annotations', 'off');
+    frame.src = url.href;
+}
+if (videoOnly) {
+    document.getElementById('inside').remove();
+    document.getElementById('edges').remove();
+    document.body.dataset.zoom = '0.000';
 }
 </script>
-<script src="iterations-data.js?v=iteration-20-129"></script>
-<script src="iteration-nav.js?v=iteration-20-129"></script>
-<script src="zoom-space.js?v=loading-118"></script>
+<script src="iterations-data.js?v=iteration-20-130"></script>
+<script src="iteration-nav.js?v=iteration-20-130"></script>
+<script src="zoom-space.js?v=iteration-20-130"></script>
 <script src="surface-texture.js?v=single-video-116"></script>
-<script src="portal19.js?v=iteration-20-129"></script>
+<script src="portal19.js?v=iteration-20-130"></script>
 <script src="loading-screen.js?v=complete-video-124"></script>
 </body>
 </html>

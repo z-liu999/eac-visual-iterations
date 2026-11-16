@@ -95,8 +95,8 @@ window.EAC_ITERATIONS=[
     25
   ] ,
   [
-    "Time Depth Without Annotations",
-    "基于 19，移除全部用户留言、连线与轨迹；保留视频时间切片和空格进入操作。",
+    "Video Only",
+    "仅播放视频，不显示用户留言，不提供内部空间或时间切片入口。",
     26
   ]
 ];

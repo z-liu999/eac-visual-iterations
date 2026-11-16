@@ -1,4 +1,5 @@
 (() => {
+    if(new URLSearchParams(location.search).get('variant')==='20')return;
     const surface=document.getElementById('surface');
     const inside=document.getElementById('inside');
     const front=document.getElementById('surface-frame');

@@ -1,5 +1,5 @@
 (() => {
-    if(new URLSearchParams(location.search).get('variant')!=='19'&&new URLSearchParams(location.search).get('variant')!=='20')return;
+    if(new URLSearchParams(location.search).get('variant')!=='19')return;
     const front=document.getElementById('surface-frame'),trails=document.getElementById('trails-frame');
     const panel=document.createElement('iframe');panel.title='Hold Space video time space';panel.allow='autoplay';
     Object.assign(panel.style,{position:'fixed',inset:'0',width:'100%',height:'100%',border:'0',zIndex:'30',visibility:'hidden',background:'white'});
