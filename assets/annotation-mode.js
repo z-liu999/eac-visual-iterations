@@ -4,7 +4,8 @@
     window.EAC_NO_ANNOTATIONS = false;
     try {
         while (true) {
-            if (new URLSearchParams(owner.location.search).get('variant') === '20') {
+            const query = new URLSearchParams(owner.location.search);
+            if (query.get('variant') === '20' || query.get('annotations') === 'off') {
                 window.EAC_NO_ANNOTATIONS = true;
                 break;
             }

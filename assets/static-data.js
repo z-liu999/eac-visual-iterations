@@ -17,6 +17,7 @@
     window.EACStaticStore = {
         revision,
         async request(method, note, from, to) {
+            if (window.EAC_NO_ANNOTATIONS) return { notes: [] };
             if (method === 'POST') {
                 const notes = local().filter(item => item.id !== note.id);
                 notes.push(note);
@@ -34,6 +35,7 @@
             return { notes: [...notes.values()].filter(item => item.end >= from && item.start <= to) };
         },
         trajectories(value) {
+            if (window.EAC_NO_ANNOTATIONS) return { ...value, entries: [], total: 0, tracks: 0, dots: 0 };
             const entries = new Map(value.entries.map(entry => [entry.id, entry]));
             for (const note of local()) {
                 if (!note.path?.length) continue;
